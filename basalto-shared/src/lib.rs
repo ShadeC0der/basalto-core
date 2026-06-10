@@ -1,11 +1,14 @@
 // Contrato de comportamiento para todos los plugin
 pub trait BasaltoPlugin {
-    // Devuelve el nombre unico del plugin
+    // Necesita un nombre unico del plugin
     fn name(&self) -> &str;
 
-    // Prepara los recursos del plugin
+    // Necesita mostrar los comandos que tiene
+    fn plugin_commands(&self) -> &[&str];
+
+    // Necesita preparar los recursos del plugin
     fn on_load(&self);
 
-    // Ejecuta la tarea principal del plugin
-    fn execute(&self);
+    // Necesita ejecutar los comandos del plugin (comando + argumentos)
+    fn execute_command(&self, command: &str, args: &[&str]);
 }

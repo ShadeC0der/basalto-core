@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "basalto-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "basalto-shared",
  "libloading",
@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "basalto-shared"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "cfg-if"
@@ -28,13 +28,6 @@ checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
 dependencies = [
  "cfg-if",
  "windows-link",
-]
-
-[[package]]
-name = "plugin_buses"
-version = "0.1.0"
-dependencies = [
- "basalto-shared",
 ]
 
 [[package]]
