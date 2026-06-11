@@ -1,3 +1,6 @@
+mod config;
+
 fn main() {
-    println!("Hello world");
+    let config = config::read_config();
+    println!("{}", config.library.url);
 }
