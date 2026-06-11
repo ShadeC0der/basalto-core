@@ -1,6 +1,6 @@
 [workspace]
 members = [
   "basalto-core",   # Motor
-  "basalto-shared", "plugins/plugin_buses", # Reglas
+  "basalto-shared", # Reglas
 ]
 resolver = "3"

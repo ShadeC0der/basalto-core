@@ -16,11 +16,11 @@ pub fn read_config() -> Config {
     let home = std::env::var("HOME").unwrap();
 
     // Construir ruta
-    let ruta = home + "/.basalto/config.toml";
+    let route = home + "/.basalto/config.toml";
 
     // Leer el archivo
-    let texto = std::fs::read_to_string(ruta).unwrap();
+    let text = std::fs::read_to_string(route).unwrap();
 
     // Convertir y devolver
-    toml::from_str(&texto).unwrap()
+    toml::from_str(&text).unwrap()
 }
