@@ -1,11 +1,23 @@
 mod config;
+mod dispatcher;
 mod plugins;
 
 fn main() {
     let config = config::read_config();
-    println!("{}", config.library.url);
+    let plugins = plugins::read_plugins();
+    let map = dispatcher::build(&plugins);
+    let args: Vec<String> = std::env::args().collect();
 
-    let plugin = plugins::read_plugins();
+    if args.len() < 2 {
+        println!("Usage: basalto <command>");
+    } else {
+        let command = &args[1];
+        let arguments = &args[2..];
+        let args_str: Vec<&str> = arguments.iter().map(|a| a.as_str()).collect();
 
-    println!("{}", plugin[0].source);
+        match map.get(command.as_str()) {
+            Some(plugin) => plugin.execute_command(command, &args_str),
+            None => println!("Unknown command: {}", command),
+        }
+    }
 }
