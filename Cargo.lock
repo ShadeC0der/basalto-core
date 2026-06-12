@@ -3,8 +3,8 @@
 version = 4
 
 [[package]]
-name = "basalto-core"
-version = "0.2.0"
+name = "basalto"
+version = "0.3.0"
 dependencies = [
  "basalto-shared",
  "libloading",
@@ -14,7 +14,8 @@ dependencies = [
 
 [[package]]
 name = "basalto-shared"
-version = "0.2.0"
+version = "1.0.0"
+source = "git+ssh://git@github.com/ShadeC0der/basalto-shared.git?tag=v1.0.0#a534974bfb5bf12737557fd72154843e3ac700cf"
 
 [[package]]
 name = "cfg-if"
