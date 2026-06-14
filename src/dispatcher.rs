@@ -1,7 +1,6 @@
 use crate::installer;
 use crate::plugins::PluginConf;
 use basalto_shared::BasaltoPlugin;
-use libloading;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -19,7 +18,7 @@ pub fn build(
         let name = input
             .source
             .split('/')
-            .last()
+            .next_back()
             .unwrap()
             .trim_end_matches(".git");
 
@@ -28,7 +27,7 @@ pub fn build(
             home, name, name
         );
 
-        installer::ensure(name, &input.source, &path);
+        installer::ensure(name, &input.source, &path, &input.branch);
         let lib = unsafe { libloading::Library::new(&path).unwrap() };
 
         let plugin: Rc<dyn BasaltoPlugin> = {

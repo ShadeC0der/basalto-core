@@ -1,11 +1,13 @@
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct Library {
     pub url: String,
     pub branch: String,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct Config {
     pub library: Library,

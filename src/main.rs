@@ -4,7 +4,7 @@ mod installer;
 mod plugins;
 
 fn main() {
-    let config = config::read_config();
+    let _config = config::read_config();
     let plugins = plugins::read_plugins();
     let (map, _libs) = dispatcher::build(&plugins);
     let args: Vec<String> = std::env::args().collect();
