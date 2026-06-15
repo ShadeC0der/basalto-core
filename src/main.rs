@@ -2,8 +2,10 @@ mod config;
 mod dispatcher;
 mod installer;
 mod plugins;
+mod setup;
 
 fn main() {
+    setup::run();
     let _config = config::read_config();
     let plugins = plugins::read_plugins();
     let (map, _libs) = dispatcher::build(&plugins);
