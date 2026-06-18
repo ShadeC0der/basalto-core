@@ -21,8 +21,9 @@ pub fn read_plugins() -> Vec<PluginConf> {
      * Y al final retorna el vector de todos los plugins declarados
      */
 
-    let home = std::env::var("HOME").unwrap();
-    let route = home + "/.basalto/plugins/";
+    let home = dirs::home_dir().unwrap();
+    let home = home.to_str().unwrap();
+    let route = format!("{}/.basalto/plugins/", home);
     let content = std::fs::read_dir(route).unwrap();
     let mut plugins = Vec::new();
 

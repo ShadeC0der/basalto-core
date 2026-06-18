@@ -47,7 +47,8 @@ pub fn build(
 
     let mut map = HashMap::new();
     let mut libs: Vec<libloading::Library> = Vec::new();
-    let home = std::env::var("HOME").unwrap();
+    let home = dirs::home_dir().unwrap();
+    let home = home.to_str().unwrap();
 
     for input in plugins {
         let name = input

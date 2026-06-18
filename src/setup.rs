@@ -6,7 +6,8 @@ pub fn run() {
      * Si no existe el config.toml lo crea con una plantilla
      */
 
-    let home = std::env::var("HOME").unwrap();
+    let home = dirs::home_dir().unwrap();
+    let home = home.to_str().unwrap();
 
     std::fs::create_dir_all(format!("{}/.basalto/plugins", home)).unwrap();
     std::fs::create_dir_all(format!("{}/.basalto/cache/plugins", home)).unwrap();

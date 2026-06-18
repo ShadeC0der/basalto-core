@@ -21,8 +21,9 @@ pub fn read_config() -> Config {
      * Convierte el .toml al struct de Rust
      */
 
-    let home = std::env::var("HOME").unwrap();
-    let route = home + "/.basalto/config.toml";
+    let home = dirs::home_dir().unwrap();
+    let home = home.to_str().unwrap();
+    let route = format!("{}/.basalto/config.toml", home);
     let text = std::fs::read_to_string(route).unwrap();
     toml::from_str(&text).unwrap()
 }
