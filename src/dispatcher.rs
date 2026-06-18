@@ -24,6 +24,7 @@ pub fn build(
      * Se obtiene la ruta de HOME
      *
      * El bucle for itera sobre todos los plugins obtenidos
+     *  Si enabled es false omite ese plugin desactivado
      *  Para obtener el nombre se divide la ruta por cada '/'
      *  Toma el ultimo elemento
      *  Abre el resultado y si tiene .git lo quita
@@ -51,6 +52,10 @@ pub fn build(
     let home = home.to_str().unwrap();
 
     for input in plugins {
+        if !input.enabled {
+            continue;
+        }
+
         let name = input
             .source
             .split('/')

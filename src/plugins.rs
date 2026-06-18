@@ -4,6 +4,7 @@ use serde::Deserialize; // Convierte un formato (TOML, JSON, etc) a Rust
 pub struct PluginConf {
     pub source: String,
     pub branch: String,
+    pub enabled: bool,
 }
 
 pub fn read_plugins() -> Vec<PluginConf> {
