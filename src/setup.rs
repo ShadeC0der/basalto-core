@@ -1,4 +1,11 @@
 pub fn run() {
+    /* Resumen de run()
+     * Obtiene la ruta al HOME
+     * Crea la estructura de carpetas necesaria para que el ecosistema de basalto funcione
+     * Crea .basalto/config.toml
+     * Si no existe el config.toml lo crea con una plantilla
+     */
+
     let home = std::env::var("HOME").unwrap();
 
     std::fs::create_dir_all(format!("{}/.basalto/plugins", home)).unwrap();
