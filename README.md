@@ -30,7 +30,17 @@ enabled = true
 
 basalto-core lo clona y compila automáticamente en el próximo arranque.
 
-## Compilar
+## Instalación
+
+```
+cargo install --path .
+```
+
+Compila el binario en modo release y lo instala en `~/.cargo/bin/basalto`. A partir de ahí se puede usar desde cualquier terminal.
+
+Para actualizar después de cambios en el Core, correr el mismo comando — sobreescribe el binario anterior.
+
+## Compilar sin instalar
 
 ```
 cargo build --release
