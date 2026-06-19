@@ -58,4 +58,7 @@ fn main() {
         println!("  {}", "─".repeat(28));
         println!("  total      → {:>8.3}ms", (t5 - t0).as_secs_f64() * 1000.0);
     }
+
+    drop(map);
+    drop(_libs);
 }

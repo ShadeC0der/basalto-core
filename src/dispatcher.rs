@@ -63,9 +63,10 @@ pub fn build(
             .unwrap()
             .trim_end_matches(".git");
 
+        let so_name = name.replace('-', "_");
         let path = format!(
             "{}/.basalto/cache/plugins/{}/target/release/lib{}.so",
-            home, name, name
+            home, name, so_name
         );
 
         installer::ensure(name, &input.source, &path, &input.branch);
