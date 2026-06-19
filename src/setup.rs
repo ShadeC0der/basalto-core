@@ -9,12 +9,16 @@ pub fn run() {
     let home = dirs::home_dir().unwrap();
     let home = home.to_str().unwrap();
 
-    std::fs::create_dir_all(format!("{}/.basalto/plugins", home)).unwrap();
-    std::fs::create_dir_all(format!("{}/.basalto/cache/plugins", home)).unwrap();
-    std::fs::create_dir_all(format!("{}/.basalto/cache/library", home)).unwrap();
+    let basalto_dir = format!("{}/.basalto", home);
+
+    if !std::path::Path::new(&basalto_dir).exists() {
+        std::fs::create_dir_all(format!("{}/.basalto/plugins", home)).unwrap();
+        std::fs::create_dir_all(format!("{}/.basalto/cache/plugins", home)).unwrap();
+        std::fs::create_dir_all(format!("{}/.basalto/cache/library", home)).unwrap();
+        println!("Inicializando carpetas en ~/.basalto/");
+    }
 
     let config_path = format!("{}/.basalto/config.toml", home);
-
     if !std::path::Path::new(&config_path).exists() {
         std::fs::write(&config_path, "[library]\nurl = \"\"\nbranch = \"main\"\n").unwrap();
     }
