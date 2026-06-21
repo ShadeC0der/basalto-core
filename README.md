@@ -2,6 +2,12 @@
 
 El núcleo del ecosistema Basalto. Carga plugins, despacha comandos y gestiona el entorno `~/.basalto/`.
 
+## El ecosistema
+
+| Componente | Descripción |
+|---|---|
+| [basalto-shared](https://github.com/ShadeC0der/basalto-shared) | El contrato — trait `BasaltoPlugin` que conecta Core y plugins |
+
 ## Qué hace
 
 basalto-core es un microkernel — nunca agrega funcionalidad por sí solo. Todo es un plugin.
