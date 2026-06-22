@@ -8,6 +8,7 @@ El núcleo del ecosistema Basalto. Carga plugins, despacha comandos y gestiona e
 |---|---|
 | [basalto-shared](https://github.com/ShadeC0der/basalto-shared) | El contrato — trait `BasaltoPlugin` que conecta Core y plugins |
 | [basalto-library](https://github.com/ShadeC0der/basalto-library) | Plugin oficial — gestiona una biblioteca personal de archivos con `add`, `show`, `edit` y `push` |
+| [basalto-tui](https://github.com/ShadeC0der/basalto-tui) | Interfaz de terminal (TUI) — navega la biblioteca, copia plantillas y edita archivos sin salir de la terminal |
 
 ## Qué hace
 
