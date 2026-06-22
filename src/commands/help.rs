@@ -14,9 +14,9 @@ const BUILTINS: &[BuiltinHelp] = &[
         name: "version",
         description: "Muestra la version del core y los plugins",
         flags: &[
-            ("--active", "Solo plugins activos"),
+            ("--active",   "Solo plugins activos"),
             ("--inactive", "Solo plugins inactivos"),
-            ("--check", "Verifica actualizaciones disponibles"),
+            ("--check",    "Verifica actualizaciones disponibles"),
         ],
     },
     BuiltinHelp {
@@ -33,24 +33,26 @@ const BUILTINS: &[BuiltinHelp] = &[
 
 pub fn run(plugins: &[PluginConf], map: &HashMap<String, Rc<dyn BasaltoPlugin>>) {
     /* Resumen de run(plugins, map)
-     * Imprime la version del core
-     * Muestra los comandos built-in con sus flags en formato arbol
-     * Para cada plugin activo busca su instancia en el map y muestra command_help()
+     * Imprime un unico arbol con el core como raiz
+     * Los built-ins y plugins son ramas del mismo nivel
+     * Los comandos del plugin y sus flags son subramas
      */
 
-    let active_plugins: Vec<&PluginConf> = plugins.iter().filter(|p| p.enabled).collect();
+    let active: Vec<&PluginConf> = plugins.iter().filter(|p| p.enabled).collect();
 
-    println!("basalto v{}\n", env!("CARGO_PKG_VERSION"));
+    println!("basalto v{}", env!("CARGO_PKG_VERSION"));
 
-    let total_builtins = BUILTINS.len();
     for (i, cmd) in BUILTINS.iter().enumerate() {
-        let is_last = i + 1 == total_builtins && active_plugins.is_empty();
-        let prefix = if is_last { "└──" } else { "├──" };
-        println!("{} {:<18} {}", prefix, cmd.name, cmd.description);
-        print_flags(cmd.flags.iter().copied(), is_last);
+        let is_last = i + 1 == BUILTINS.len() && active.is_empty();
+        print_row("", is_last, cmd.name, cmd.description);
+        let cont = if is_last { "    " } else { "│   " };
+        for (fi, (fname, fdesc)) in cmd.flags.iter().enumerate() {
+            let flag_last = fi + 1 == cmd.flags.len();
+            print_row(cont, flag_last, fname, fdesc);
+        }
     }
 
-    for plugin_conf in &active_plugins {
+    for (pi, plugin_conf) in active.iter().enumerate() {
         let name = plugin_conf
             .source
             .split('/')
@@ -58,35 +60,37 @@ pub fn run(plugins: &[PluginConf], map: &HashMap<String, Rc<dyn BasaltoPlugin>>)
             .unwrap()
             .trim_end_matches(".git");
 
-        println!("\n{}:", name);
+        let is_last_plugin = pi + 1 == active.len();
+        let plugin_prefix = if is_last_plugin { "└──" } else { "├──" };
+        println!("{} {}", plugin_prefix, name);
 
-        // Obtiene la instancia ya cargada buscando cualquier comando del plugin en el map
+        let cont = if is_last_plugin { "    " } else { "│   " };
+
         let instance = map.values().find(|p| {
             let so_name = name.replace('-', "_");
             p.name() == so_name || p.name() == name
         });
 
         let Some(plugin) = instance else { continue };
-
         let commands = plugin.command_help();
-        let total = commands.len();
 
         for (ci, cmd) in commands.iter().enumerate() {
-            let is_last = ci + 1 == total;
-            let prefix = if is_last { "└──" } else { "├──" };
-            println!("{} {:<18} {}", prefix, cmd.name, cmd.description);
-            print_flags(cmd.flags.iter().map(|f| (f.name, f.description)), is_last);
+            let is_last_cmd = ci + 1 == commands.len();
+            print_row(cont, is_last_cmd, cmd.name, cmd.description);
+            let cmd_cont = if is_last_cmd {
+                format!("{}    ", cont)
+            } else {
+                format!("{}│   ", cont)
+            };
+            for (fi, flag) in cmd.flags.iter().enumerate() {
+                let flag_last = fi + 1 == cmd.flags.len();
+                print_row(&cmd_cont, flag_last, flag.name, flag.description);
+            }
         }
     }
 }
 
-fn print_flags<'a>(flags: impl Iterator<Item = (&'a str, &'a str)>, parent_is_last: bool) {
-    let flags: Vec<_> = flags.collect();
-    let indent = if parent_is_last { "    " } else { "│   " };
-
-    for (i, (name, desc)) in flags.iter().enumerate() {
-        let is_last = i + 1 == flags.len();
-        let prefix = if is_last { "└──" } else { "├──" };
-        println!("{}{}  {:<14} {}", indent, prefix, name, desc);
-    }
+fn print_row(indent: &str, is_last: bool, name: &str, desc: &str) {
+    let prefix = if is_last { "└──" } else { "├──" };
+    println!("{}{} {:<18} {}", indent, prefix, name, desc);
 }
