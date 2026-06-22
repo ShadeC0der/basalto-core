@@ -58,7 +58,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
 
         let status = if check {
             match needs_update(name) {
-                Some(nueva) => format!("v{} -> v{} (actualizar)", version, nueva),
+                Some(nueva) => format!("-> v{} (actualizar)", nueva),
                 None => if p.enabled { "activo".to_string() } else { "inactivo".to_string() },
             }
         } else if p.enabled {
