@@ -1,9 +1,26 @@
+struct Section {
+    header: &'static str,
+    default: &'static str,
+}
+
+const REQUIRED: &[Section] = &[
+    Section {
+        header: "[library]",
+        default: "[library]\nurl = \"\"\nbranch = \"main\"\n",
+    },
+    Section {
+        header: "[editors]",
+        default: "[editors]\navailable = [\"nvim\"]\n",
+    },
+];
+
 pub fn run() {
     /* Resumen de run()
      * Obtiene la ruta al HOME
-     * Crea la estructura de carpetas necesaria para que el ecosistema de basalto funcione
-     * Crea .basalto/config.toml
-     * Si no existe el config.toml lo crea con una plantilla
+     * Crea la estructura de carpetas necesaria si no existe
+     * Crea config.toml si no existe
+     * Verifica que cada sección requerida esté presente
+     * Si falta alguna sección la agrega automáticamente con sus valores por defecto
      */
 
     let home = dirs::home_dir().unwrap();
@@ -20,6 +37,16 @@ pub fn run() {
 
     let config_path = format!("{}/.basalto/config.toml", home);
     if !std::path::Path::new(&config_path).exists() {
-        std::fs::write(&config_path, "[library]\nurl = \"\"\nbranch = \"main\"\n").unwrap();
+        std::fs::write(&config_path, "").unwrap();
+    }
+
+    let mut content = std::fs::read_to_string(&config_path).unwrap();
+
+    for section in REQUIRED {
+        if !content.contains(section.header) {
+            content.push_str(&format!("\n{}\n", section.default));
+            std::fs::write(&config_path, &content).unwrap();
+        }
     }
 }
+
