@@ -29,6 +29,13 @@ const BUILTINS: &[BuiltinHelp] = &[
         description: "Muestra este mensaje",
         flags: &[],
     },
+    BuiltinHelp {
+        name: "clear-cache",
+        description: "Borra el cache de plugins y del core",
+        flags: &[
+            ("--yes", "Confirma el borrado sin pedir confirmacion"),
+        ],
+    },
 ];
 
 struct Row {
