@@ -100,18 +100,25 @@ fn actualizar_bibliotecas(home: &str) {
         let pb = spinner();
         pb.set_message(format!("biblioteca:{}  buscando actualizacion...", lib.name));
 
-        if !std::path::Path::new(&lib_dir).exists() {
-            pb.set_message(format!("biblioteca:{}  clonando...", lib.name));
-            let ok = correr_silencioso("git", &["clone", &lib.source, &lib_dir], home);
-            if ok {
-                pb.finish_with_message(format!("{} biblioteca:{}  clonada", style("✓").green(), lib.name));
-            } else {
-                pb.finish_with_message(format!("{} biblioteca:{}  error al clonar", style("✗").red(), lib.name));
+        match &lib.source {
+            Some(src) if !std::path::Path::new(&lib_dir).exists() => {
+                pb.set_message(format!("biblioteca:{}  clonando...", lib.name));
+                let ok = correr_silencioso("git", &["clone", src, &lib_dir], home);
+                if ok {
+                    pb.finish_with_message(format!("{} biblioteca:{}  clonada", style("✓").green(), lib.name));
+                } else {
+                    pb.finish_with_message(format!("{} biblioteca:{}  error al clonar", style("✗").red(), lib.name));
+                }
             }
-        } else {
-            correr_silencioso("git", &["fetch"], &lib_dir);
-            correr_silencioso("git", &["pull", "--ff-only"], &lib_dir);
-            pb.finish_with_message(format!("{} biblioteca:{}  actualizada", style("✓").green(), lib.name));
+            Some(_) => {
+                correr_silencioso("git", &["fetch"], &lib_dir);
+                correr_silencioso("git", &["pull", "--ff-only"], &lib_dir);
+                pb.finish_with_message(format!("{} biblioteca:{}  actualizada", style("✓").green(), lib.name));
+            }
+            None => {
+                std::fs::create_dir_all(&lib_dir).ok();
+                pb.finish_with_message(format!("{} biblioteca:{}  local", style("✓").green(), lib.name));
+            }
         }
     }
 }
