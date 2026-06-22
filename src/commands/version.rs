@@ -1,12 +1,13 @@
 use crate::plugins::PluginConf;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
 
 pub fn run(plugins: &[PluginConf], args: &[&str]) {
     /* Resumen de run(plugins, args)
      * Imprime la versión del core con estado de actualización si se usa --check
      * Detecta los flags --active, --inactive y --check en los argumentos
      * Filtra la lista de plugins según el flag recibido (o muestra todos si no hay flag)
-     * Para cada plugin imprime nombre, versión leída del Cargo.toml en cache, y estado
-     * Con --check muestra la versión remota disponible tanto del core como de los plugins
+     * Con --check muestra un spinner mientras consulta el remoto y luego imprime el árbol
      * Usa caracteres ├── y └── para el último elemento, imitando el comando tree
      */
 
@@ -16,56 +17,56 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
 
     let core_version = env!("CARGO_PKG_VERSION");
 
-    if check {
-        match check_remote_version("") {
-            Some(nueva) => println!(
-                "basalto-core v{} -> v{} (actualizar)",
-                core_version, nueva
-            ),
-            None => println!("basalto-core v{}", core_version),
-        }
-    } else {
-        println!("basalto-core v{}", core_version);
-    }
-
     let filtered: Vec<&PluginConf> = plugins
         .iter()
         .filter(|p| {
-            if show_active {
-                return p.enabled;
-            }
-            if show_inactive {
-                return !p.enabled;
-            }
+            if show_active { return p.enabled; }
+            if show_inactive { return !p.enabled; }
             true
         })
         .collect();
 
-    let total = filtered.len();
+    if check {
+        let pb = spinner();
+        pb.set_message("Verificando actualizaciones...");
 
-    for (i, p) in filtered.iter().enumerate() {
-        let name = p
-            .source
-            .split('/')
-            .next_back()
-            .unwrap()
-            .trim_end_matches(".git");
+        let core_update = check_remote_version("");
+        let plugin_updates: Vec<Option<String>> = filtered
+            .iter()
+            .map(|p| {
+                let name = p.source.split('/').next_back().unwrap().trim_end_matches(".git");
+                needs_update(name)
+            })
+            .collect();
 
-        let prefix = if i + 1 == total { "└──" } else { "├──" };
-        let version = read_plugin_version(name);
+        pb.finish_and_clear();
 
-        let status = if check {
-            match needs_update(name) {
+        match core_update {
+            Some(ref nueva) => println!("basalto-core v{} -> v{} (actualizar)", core_version, nueva),
+            None => println!("basalto-core v{}", core_version),
+        }
+
+        let total = filtered.len();
+        for (i, (p, update)) in filtered.iter().zip(plugin_updates.iter()).enumerate() {
+            let name = p.source.split('/').next_back().unwrap().trim_end_matches(".git");
+            let prefix = if i + 1 == total { "└──" } else { "├──" };
+            let version = read_plugin_version(name);
+            let status = match update {
                 Some(nueva) => format!("-> v{} (actualizar)", nueva),
                 None => if p.enabled { "activo".to_string() } else { "inactivo".to_string() },
-            }
-        } else if p.enabled {
-            "activo".to_string()
-        } else {
-            "inactivo".to_string()
-        };
-
-        println!("{} {} v{} ({})", prefix, name, version, status);
+            };
+            println!("{} {} v{} ({})", prefix, name, version, status);
+        }
+    } else {
+        println!("basalto-core v{}", core_version);
+        let total = filtered.len();
+        for (i, p) in filtered.iter().enumerate() {
+            let name = p.source.split('/').next_back().unwrap().trim_end_matches(".git");
+            let prefix = if i + 1 == total { "└──" } else { "├──" };
+            let version = read_plugin_version(name);
+            let status = if p.enabled { "activo" } else { "inactivo" };
+            println!("{} {} v{} ({})", prefix, name, version, status);
+        }
     }
 
     fn read_plugin_version(name: &str) -> String {
@@ -148,6 +149,17 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
                         .map(|v| v.to_string())
                 })
             })
+    }
+
+    fn spinner() -> ProgressBar {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::with_template("  {spinner:.cyan} {msg}")
+                .unwrap()
+                .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", ""]),
+        );
+        pb.enable_steady_tick(Duration::from_millis(80));
+        pb
     }
 
     fn check_remote_version(_source: &str) -> Option<String> {
