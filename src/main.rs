@@ -41,6 +41,7 @@ fn main() {
             "update" => commands::update::run(&args_str),
             "clear-cache" => commands::clear_cache::run(&args_str),
             "help" => commands::help::run(&plugins, &map),
+            "tui" => commands::tui::run(),
             _ => match map.get(command.as_str()) {
                 Some(plugin) => plugin.execute_command(command, &args_str),
                 None => println!("Unknown command: {}", command),

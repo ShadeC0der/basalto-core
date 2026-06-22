@@ -12,11 +12,18 @@ pub struct CoreConfig {
     pub source: String,
 }
 
+#[derive(Deserialize)]
+pub struct TuiConfig {
+    pub source: String,
+}
+
 #[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct Config {
     pub library: Library,
     pub core: CoreConfig,
+    #[serde(default)]
+    pub tui: Option<TuiConfig>,
 }
 
 pub fn read_config() -> Config {

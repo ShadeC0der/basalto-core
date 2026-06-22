@@ -84,6 +84,7 @@ pub fn run(args: &[&str]) {
     }
 
     actualizar_core(&home);
+    actualizar_tui(&home);
 }
 
 fn actualizar_core(home: &str) {
@@ -160,6 +161,65 @@ fn correr_silencioso(cmd: &str, args: &[&str], dir: &str) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+fn actualizar_tui(home: &str) {
+    let conf = config::read_config();
+    let tui_source = match conf.tui {
+        Some(c) => c.source,
+        None => return,
+    };
+
+    let tui_dir = format!("{}/.basalto/cache/tui", home);
+    let pb = spinner();
+    pb.set_message("basalto-tui  buscando actualizacion...");
+
+    if !std::path::Path::new(&tui_dir).exists() {
+        pb.set_message("basalto-tui  clonando...");
+        correr_silencioso("git", &["clone", &tui_source, &tui_dir], home);
+    } else {
+        correr_silencioso("git", &["fetch"], &tui_dir);
+    }
+
+    let version_antes = leer_version(&format!("{}/Cargo.toml", tui_dir));
+    correr_silencioso("git", &["reset", "--hard", "origin/HEAD"], &tui_dir);
+    let version_despues = leer_version(&format!("{}/Cargo.toml", tui_dir));
+
+    let hay_cambio = version_antes != version_despues;
+    let no_instalado = !std::path::Path::new(&format!("{}/.cargo/bin/basalto-tui", home)).exists();
+
+    if !hay_cambio && !no_instalado {
+        pb.finish_with_message(format!(
+            "{} basalto-tui  {}",
+            style("✓").green(),
+            style(format!("v{}", version_despues.as_deref().unwrap_or("?"))).cyan(),
+        ));
+        return;
+    }
+
+    pb.set_message("basalto-tui  instalando...");
+    let ok = correr_silencioso("cargo", &["install", "--path", &tui_dir], home);
+
+    if !ok {
+        pb.finish_with_message(format!("{} basalto-tui  error al instalar", style("✗").red()));
+        return;
+    }
+
+    if hay_cambio {
+        pb.finish_with_message(format!(
+            "{} basalto-tui  {} {} {}",
+            style("✓").green(),
+            style(format!("v{}", version_antes.as_deref().unwrap_or("?"))).cyan(),
+            style("→").yellow(),
+            style(format!("v{}", version_despues.as_deref().unwrap_or("?"))).cyan(),
+        ));
+    } else {
+        pb.finish_with_message(format!(
+            "{} basalto-tui  {}",
+            style("✓").green(),
+            style(format!("v{}", version_despues.as_deref().unwrap_or("?"))).cyan(),
+        ));
+    }
 }
 
 fn leer_version(cargo_toml: &str) -> Option<String> {

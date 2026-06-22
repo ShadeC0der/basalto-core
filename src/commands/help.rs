@@ -39,6 +39,11 @@ const BUILTINS: &[BuiltinHelp] = &[
             ("--yes", "Confirma el borrado sin pedir confirmacion"),
         ],
     },
+    BuiltinHelp {
+        name: "tui",
+        description: "Abre la interfaz visual interactiva",
+        flags: &[],
+    },
 ];
 
 struct Row {
