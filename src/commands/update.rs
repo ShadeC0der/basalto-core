@@ -1,6 +1,7 @@
 use crate::plugins;
 use crate::config;
 use crate::commands::clear_cache;
+use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -37,7 +38,7 @@ pub fn run(args: &[&str]) {
             pb.set_message(format!("{}  clonando...", name));
             let ok = correr_silencioso("git", &["clone", &plugin.source, &plugin_dir], &home);
             if !ok {
-                pb.finish_with_message(format!("✗ {}  error al clonar", name));
+                pb.finish_with_message(format!("{} {}  error al clonar", style("✗").red(), name));
                 continue;
             }
         } else {
@@ -59,22 +60,25 @@ pub fn run(args: &[&str]) {
         let ok = correr_silencioso("cargo", &["build", "--release"], &plugin_dir);
 
         if !ok {
-            pb.finish_with_message(format!("✗ {}  error al compilar", name));
+            pb.finish_with_message(format!("{} {}  error al compilar", style("✗").red(), name));
             continue;
         }
 
         if hay_cambio {
             pb.finish_with_message(format!(
-                "✓ {}  {} → {}",
+                "{} {}  {} {} {}",
+                style("✓").green(),
                 name,
-                version_antes.as_deref().unwrap_or("?"),
-                version_despues.as_deref().unwrap_or("?")
+                style(format!("v{}", version_antes.as_deref().unwrap_or("?"))).cyan(),
+                style("→").yellow(),
+                style(format!("v{}", version_despues.as_deref().unwrap_or("?"))).cyan(),
             ));
         } else {
             pb.finish_with_message(format!(
-                "✓ {}  {} (al dia)",
+                "{} {}  {}",
+                style("✓").green(),
                 name,
-                version_despues.as_deref().unwrap_or("?")
+                style(format!("v{}", version_despues.as_deref().unwrap_or("?"))).cyan(),
             ));
         }
     }
@@ -115,13 +119,23 @@ fn actualizar_core(home: &str) {
             let ok = correr_silencioso("cargo", &["install", "--path", &core_dir], home);
 
             if ok {
-                pb.finish_with_message(format!("✓ basalto-core  {} → {}", instalada, nueva));
+                pb.finish_with_message(format!(
+                    "{} basalto-core  {} {} {}",
+                    style("✓").green(),
+                    style(format!("v{}", instalada)).cyan(),
+                    style("→").yellow(),
+                    style(format!("v{}", nueva)).cyan(),
+                ));
             } else {
-                pb.finish_with_message("✗ basalto-core  error al instalar".to_string());
+                pb.finish_with_message(format!("{} basalto-core  error al instalar", style("✗").red()));
             }
         }
         _ => {
-            pb.finish_with_message(format!("✓ basalto-core  {} (al dia)", instalada));
+            pb.finish_with_message(format!(
+                "{} basalto-core  {}",
+                style("✓").green(),
+                style(format!("v{}", instalada)).cyan(),
+            ));
         }
     }
 }

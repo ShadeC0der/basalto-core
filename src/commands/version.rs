@@ -1,4 +1,5 @@
 use crate::plugins::PluginConf;
+use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -42,30 +43,50 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
         pb.finish_and_clear();
 
         match core_update {
-            Some(ref nueva) => println!("basalto-core v{} -> v{} (actualizar)", core_version, nueva),
-            None => println!("basalto-core v{}", core_version),
+            Some(ref nueva) => println!(
+                "basalto-core {}",
+                style(format!("v{} → v{}", core_version, nueva)).yellow()
+            ),
+            None => println!("basalto-core {}", style(format!("v{}", core_version)).cyan()),
         }
 
         let total = filtered.len();
         for (i, (p, update)) in filtered.iter().zip(plugin_updates.iter()).enumerate() {
             let name = p.source.split('/').next_back().unwrap().trim_end_matches(".git");
-            let prefix = if i + 1 == total { "└──" } else { "├──" };
+            let prefix = style(if i + 1 == total { "└──" } else { "├──" }).dim();
             let version = read_plugin_version(name);
-            let status = match update {
-                Some(nueva) => format!("-> v{} (actualizar)", nueva),
-                None => if p.enabled { "activo".to_string() } else { "inactivo".to_string() },
+            let info = match update {
+                Some(nueva) => format!(
+                    "{} {}",
+                    style(format!("v{}", version)).cyan(),
+                    style(format!("→ v{}", nueva)).yellow()
+                ),
+                None if !p.enabled => format!(
+                    "{} {}",
+                    style(format!("v{}", version)).cyan(),
+                    style("[inactivo]").dim()
+                ),
+                None => style(format!("v{}", version)).cyan().to_string(),
             };
-            println!("{} {} v{} ({})", prefix, name, version, status);
+            println!("{} {} {}", prefix, name, info);
         }
     } else {
-        println!("basalto-core v{}", core_version);
+        println!("basalto-core {}", style(format!("v{}", core_version)).cyan());
         let total = filtered.len();
         for (i, p) in filtered.iter().enumerate() {
             let name = p.source.split('/').next_back().unwrap().trim_end_matches(".git");
-            let prefix = if i + 1 == total { "└──" } else { "├──" };
+            let prefix = style(if i + 1 == total { "└──" } else { "├──" }).dim();
             let version = read_plugin_version(name);
-            let status = if p.enabled { "activo" } else { "inactivo" };
-            println!("{} {} v{} ({})", prefix, name, version, status);
+            let info = if p.enabled {
+                style(format!("v{}", version)).cyan().to_string()
+            } else {
+                format!(
+                    "{} {}",
+                    style(format!("v{}", version)).cyan(),
+                    style("[inactivo]").dim()
+                )
+            };
+            println!("{} {} {}", prefix, name, info);
         }
     }
 

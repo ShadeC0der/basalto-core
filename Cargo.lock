@@ -4,9 +4,10 @@ version = 4
 
 [[package]]
 name = "basalto"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "basalto-shared",
+ "console",
  "dirs",
  "indicatif",
  "libloading",
