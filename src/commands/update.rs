@@ -1,17 +1,18 @@
 use crate::plugins;
 use crate::config;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
 
 pub fn run(_args: &[&str]) {
     /* Resumen de run(args)
-     * Lee todos los plugins declarados
-     * Para cada plugin hace git pull y recompila el .so
-     * Clona o actualiza el core en ~/.basalto/cache/core/
-     * Si la versión del core cambió reinstala el binario
+     * Muestra un spinner por cada plugin y por el core
+     * Silencia el output de git y cargo para mostrar solo el resumen
+     * Al terminar cada paso reemplaza el spinner con el resultado
      */
 
     let plugins = plugins::read_plugins();
     let home = dirs::home_dir().unwrap();
-    let home = home.to_str().unwrap();
+    let home = home.to_str().unwrap().to_string();
 
     for plugin in &plugins {
         let name = plugin
@@ -24,91 +25,126 @@ pub fn run(_args: &[&str]) {
         let plugin_dir = format!("{}/.basalto/cache/plugins/{}", home, name);
 
         if !std::path::Path::new(&plugin_dir).exists() {
-            println!("Plugin '{}' no esta en cache, omitiendo.", name);
+            println!("  - {}  no esta en cache, omitiendo.", name);
             continue;
         }
 
-        println!("Actualizando {}...", name);
+        let pb = spinner();
+        pb.set_message(format!("{}  buscando actualizacion...", name));
 
-        std::process::Command::new("git")
-            .args(["fetch"])
-            .current_dir(&plugin_dir)
-            .status()
-            .unwrap();
+        let version_antes = leer_version(&format!("{}/Cargo.toml", plugin_dir));
 
-        std::process::Command::new("git")
-            .args(["reset", "--hard", "origin/HEAD"])
-            .current_dir(&plugin_dir)
-            .status()
-            .unwrap();
+        correr_silencioso("git", &["fetch"], &plugin_dir);
+        correr_silencioso("git", &["reset", "--hard", "origin/HEAD"], &plugin_dir);
 
-        std::process::Command::new("cargo")
-            .args(["build", "--release"])
-            .current_dir(&plugin_dir)
-            .status()
-            .unwrap();
+        let version_despues = leer_version(&format!("{}/Cargo.toml", plugin_dir));
 
-        println!("{} actualizado.", name);
+        let hay_cambio = version_antes != version_despues;
+
+        if hay_cambio {
+            pb.set_message(format!(
+                "{}  {} → {}  compilando...",
+                name,
+                version_antes.as_deref().unwrap_or("?"),
+                version_despues.as_deref().unwrap_or("?")
+            ));
+
+            let ok = correr_silencioso("cargo", &["build", "--release"], &plugin_dir);
+
+            if ok {
+                pb.finish_with_message(format!(
+                    "✓ {}  {} → {}",
+                    name,
+                    version_antes.as_deref().unwrap_or("?"),
+                    version_despues.as_deref().unwrap_or("?")
+                ));
+            } else {
+                pb.finish_with_message(format!("✗ {}  error al compilar", name));
+            }
+        } else {
+            pb.finish_with_message(format!(
+                "✓ {}  {} (al dia)",
+                name,
+                version_despues.as_deref().unwrap_or("?")
+            ));
+        }
     }
 
-    update_core(home);
+    actualizar_core(&home);
 }
 
-fn update_core(home: &str) {
-    /* Resumen de update_core(home)
-     * Lee la URL del core desde config.toml
-     * Clona el repo si no existe en ~/.basalto/cache/core/
-     * Hace git pull si ya existe
-     * Compara la versión del cache con la instalada
-     * Si hay diferencia reinstala el binario con cargo install
+fn actualizar_core(home: &str) {
+    /* Resumen de actualizar_core(home)
+     * Clona o actualiza el cache del core con un spinner
+     * Compara versiones y reinstala si hay cambio
      */
 
     let core_conf = config::read_core();
     let core_dir = format!("{}/.basalto/cache/core", home);
 
-    if !std::path::Path::new(&core_dir).exists() {
-        println!("Clonando basalto-core...");
-        std::process::Command::new("git")
-            .args(["clone", &core_conf.source, &core_dir])
-            .status()
-            .unwrap();
-    } else {
-        println!("Actualizando basalto-core...");
-        std::process::Command::new("git")
-            .args(["fetch"])
-            .current_dir(&core_dir)
-            .status()
-            .unwrap();
+    let pb = spinner();
+    pb.set_message("basalto-core  buscando actualizacion...");
 
-        std::process::Command::new("git")
-            .args(["reset", "--hard", "origin/HEAD"])
-            .current_dir(&core_dir)
-            .status()
-            .unwrap();
+    if !std::path::Path::new(&core_dir).exists() {
+        pb.set_message("basalto-core  clonando...");
+        correr_silencioso("git", &["clone", &core_conf.source, &core_dir], home);
+    } else {
+        correr_silencioso("git", &["fetch"], &core_dir);
+        correr_silencioso("git", &["reset", "--hard", "origin/HEAD"], &core_dir);
     }
 
-    let remote_version = std::fs::read_to_string(format!("{}/Cargo.toml", core_dir))
-        .ok()
-        .and_then(|content| {
-            content
-                .lines()
-                .find(|l| l.starts_with("version"))
-                .and_then(|l| l.split('"').nth(1))
-                .map(|v| v.to_string())
-        });
+    let cache_version = leer_version(&format!("{}/Cargo.toml", core_dir));
+    let instalada = env!("CARGO_PKG_VERSION");
 
-    match remote_version {
-        Some(v) if v != env!("CARGO_PKG_VERSION") => {
-            println!("Nueva version disponible: v{} -> v{}", env!("CARGO_PKG_VERSION"), v);
-            println!("Instalando...");
-            std::process::Command::new("cargo")
-                .args(["install", "--path", &core_dir])
-                .status()
-                .unwrap();
-            println!("basalto-core actualizado a v{}.", v);
+    match cache_version {
+        Some(ref nueva) if nueva != instalada => {
+            pb.set_message(format!(
+                "basalto-core  {} → {}  instalando...",
+                instalada, nueva
+            ));
+
+            let ok = correr_silencioso("cargo", &["install", "--path", &core_dir], home);
+
+            if ok {
+                pb.finish_with_message(format!("✓ basalto-core  {} → {}", instalada, nueva));
+            } else {
+                pb.finish_with_message("✗ basalto-core  error al instalar".to_string());
+            }
         }
         _ => {
-            println!("basalto-core ya esta al dia.");
+            pb.finish_with_message(format!("✓ basalto-core  {} (al dia)", instalada));
         }
     }
+}
+
+fn spinner() -> ProgressBar {
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::with_template("  {spinner:.cyan} {msg}")
+            .unwrap()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", ""]),
+    );
+    pb.enable_steady_tick(Duration::from_millis(80));
+    pb
+}
+
+fn correr_silencioso(cmd: &str, args: &[&str], dir: &str) -> bool {
+    std::process::Command::new(cmd)
+        .args(args)
+        .current_dir(dir)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn leer_version(cargo_toml: &str) -> Option<String> {
+    std::fs::read_to_string(cargo_toml).ok().and_then(|content| {
+        content
+            .lines()
+            .find(|l| l.starts_with("version"))
+            .and_then(|l| l.split('"').nth(1))
+            .map(|v| v.to_string())
+    })
 }
