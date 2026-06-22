@@ -13,6 +13,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
 
     let show_active = args.contains(&"--active");
     let show_inactive = args.contains(&"--inactive");
+    let check = args.contains(&"--check");
 
     let filtered: Vec<&PluginConf> = plugins
         .iter()
@@ -43,7 +44,15 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
         } else {
             "├──"
         };
-        let status = if p.enabled { "activo" } else { "inactivo" };
+
+        let status = if check && needs_update(name) {
+            "actualizar"
+        } else if p.enabled {
+            "activo"
+        } else {
+            "inactivo"
+        };
+
         let version = read_plugin_version(name);
         println!("{} {} v{} ({})", prefix, name, version, status);
     }
@@ -73,5 +82,37 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
                     .map(|v| v.to_string())
             })
             .unwrap_or_else(|| "?".to_string())
+    }
+
+    fn needs_update(name: &str) -> bool {
+        /* Resumen de needs_update(name)
+         * Construye la ruta al cache del plugin
+         * Hace git fetch para traer el estado del remoto
+         * Cuenta los commits que el remoto tiene y el local no
+         * Retorna true si hay commits pendientes de actualizar
+         */
+
+        let home = dirs::home_dir().unwrap();
+        let plugin_dir = format!("{}/.basalto/cache/plugins/{}", home.to_str().unwrap(), name);
+
+        if !std::path::Path::new(&plugin_dir).exists() {
+            return false;
+        }
+
+        std::process::Command::new("git")
+            .args(["fetch"])
+            .current_dir(&plugin_dir)
+            .output()
+            .ok();
+
+        let output = std::process::Command::new("git")
+            .args(["rev-list", "HEAD..@{u}", "--count"])
+            .current_dir(&plugin_dir)
+            .output();
+
+        match output {
+            Ok(o) => String::from_utf8_lossy(&o.stdout).trim() != "0",
+            Err(_) => false,
+        }
     }
 }
