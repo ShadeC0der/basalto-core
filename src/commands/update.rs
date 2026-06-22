@@ -1,14 +1,21 @@
 use crate::plugins;
 use crate::config;
+use crate::commands::clear_cache;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
-pub fn run(_args: &[&str]) {
+pub fn run(args: &[&str]) {
     /* Resumen de run(args)
+     * Con --clean limpia el cache antes de actualizar (reinstalacion completa)
      * Muestra un spinner por cada plugin y por el core
+     * Si un plugin no esta en cache lo clona en lugar de saltarlo
      * Silencia el output de git y cargo para mostrar solo el resumen
-     * Al terminar cada paso reemplaza el spinner con el resultado
      */
+
+    if args.contains(&"--clean") {
+        clear_cache::run(&["--yes"]);
+        println!();
+    }
 
     let plugins = plugins::read_plugins();
     let home = dirs::home_dir().unwrap();
@@ -24,43 +31,45 @@ pub fn run(_args: &[&str]) {
 
         let plugin_dir = format!("{}/.basalto/cache/plugins/{}", home, name);
 
-        if !std::path::Path::new(&plugin_dir).exists() {
-            println!("  - {}  no esta en cache, omitiendo.", name);
-            continue;
-        }
-
         let pb = spinner();
-        pb.set_message(format!("{}  buscando actualizacion...", name));
+
+        if !std::path::Path::new(&plugin_dir).exists() {
+            pb.set_message(format!("{}  clonando...", name));
+            let ok = correr_silencioso("git", &["clone", &plugin.source, &plugin_dir], &home);
+            if !ok {
+                pb.finish_with_message(format!("✗ {}  error al clonar", name));
+                continue;
+            }
+        } else {
+            pb.set_message(format!("{}  buscando actualizacion...", name));
+            correr_silencioso("git", &["fetch"], &plugin_dir);
+            correr_silencioso("git", &["reset", "--hard", "origin/HEAD"], &plugin_dir);
+        }
 
         let version_antes = leer_version(&format!("{}/Cargo.toml", plugin_dir));
 
+        // Releer version despues del reset para detectar cambio
         correr_silencioso("git", &["fetch"], &plugin_dir);
         correr_silencioso("git", &["reset", "--hard", "origin/HEAD"], &plugin_dir);
-
         let version_despues = leer_version(&format!("{}/Cargo.toml", plugin_dir));
 
         let hay_cambio = version_antes != version_despues;
 
+        pb.set_message(format!("{}  compilando...", name));
+        let ok = correr_silencioso("cargo", &["build", "--release"], &plugin_dir);
+
+        if !ok {
+            pb.finish_with_message(format!("✗ {}  error al compilar", name));
+            continue;
+        }
+
         if hay_cambio {
-            pb.set_message(format!(
-                "{}  {} → {}  compilando...",
+            pb.finish_with_message(format!(
+                "✓ {}  {} → {}",
                 name,
                 version_antes.as_deref().unwrap_or("?"),
                 version_despues.as_deref().unwrap_or("?")
             ));
-
-            let ok = correr_silencioso("cargo", &["build", "--release"], &plugin_dir);
-
-            if ok {
-                pb.finish_with_message(format!(
-                    "✓ {}  {} → {}",
-                    name,
-                    version_antes.as_deref().unwrap_or("?"),
-                    version_despues.as_deref().unwrap_or("?")
-                ));
-            } else {
-                pb.finish_with_message(format!("✗ {}  error al compilar", name));
-            }
         } else {
             pb.finish_with_message(format!(
                 "✓ {}  {} (al dia)",

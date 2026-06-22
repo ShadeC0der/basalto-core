@@ -22,7 +22,9 @@ const BUILTINS: &[BuiltinHelp] = &[
     BuiltinHelp {
         name: "update",
         description: "Actualiza todos los plugins y el core",
-        flags: &[],
+        flags: &[
+            ("--clean", "Limpia el cache antes de actualizar"),
+        ],
     },
     BuiltinHelp {
         name: "help",
