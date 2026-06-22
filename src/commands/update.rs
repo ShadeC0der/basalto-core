@@ -31,7 +31,13 @@ pub fn run(_args: &[&str]) {
         println!("Actualizando {}...", name);
 
         std::process::Command::new("git")
-            .args(["pull"])
+            .args(["fetch"])
+            .current_dir(&plugin_dir)
+            .status()
+            .unwrap();
+
+        std::process::Command::new("git")
+            .args(["reset", "--hard", "origin/HEAD"])
             .current_dir(&plugin_dir)
             .status()
             .unwrap();
@@ -69,7 +75,13 @@ fn update_core(home: &str) {
     } else {
         println!("Actualizando basalto-core...");
         std::process::Command::new("git")
-            .args(["pull"])
+            .args(["fetch"])
+            .current_dir(&core_dir)
+            .status()
+            .unwrap();
+
+        std::process::Command::new("git")
+            .args(["reset", "--hard", "origin/HEAD"])
             .current_dir(&core_dir)
             .status()
             .unwrap();
