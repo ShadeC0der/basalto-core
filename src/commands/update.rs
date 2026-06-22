@@ -83,8 +83,37 @@ pub fn run(args: &[&str]) {
         }
     }
 
+    actualizar_bibliotecas(&home);
     actualizar_core(&home);
     actualizar_tui(&home);
+}
+
+fn actualizar_bibliotecas(home: &str) {
+    let conf = config::read_config();
+    if conf.libraries.list.is_empty() { return; }
+
+    let libs_dir = format!("{}/.basalto/cache/libraries", home);
+    std::fs::create_dir_all(&libs_dir).ok();
+
+    for lib in &conf.libraries.list {
+        let lib_dir = format!("{}/{}", libs_dir, lib.name);
+        let pb = spinner();
+        pb.set_message(format!("biblioteca:{}  buscando actualizacion...", lib.name));
+
+        if !std::path::Path::new(&lib_dir).exists() {
+            pb.set_message(format!("biblioteca:{}  clonando...", lib.name));
+            let ok = correr_silencioso("git", &["clone", &lib.source, &lib_dir], home);
+            if ok {
+                pb.finish_with_message(format!("{} biblioteca:{}  clonada", style("✓").green(), lib.name));
+            } else {
+                pb.finish_with_message(format!("{} biblioteca:{}  error al clonar", style("✗").red(), lib.name));
+            }
+        } else {
+            correr_silencioso("git", &["fetch"], &lib_dir);
+            correr_silencioso("git", &["pull", "--ff-only"], &lib_dir);
+            pb.finish_with_message(format!("{} biblioteca:{}  actualizada", style("✓").green(), lib.name));
+        }
+    }
 }
 
 fn actualizar_core(home: &str) {
