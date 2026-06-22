@@ -24,7 +24,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
                 "basalto-core v{} -> v{} (actualizar)",
                 core_version, nueva
             ),
-            None => println!("basalto-core v{} (al dia)", core_version),
+            None => println!("basalto-core v{}", core_version),
         }
     } else {
         println!("basalto-core v{}", core_version);
@@ -59,13 +59,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
         let status = if check {
             match needs_update(name) {
                 Some(nueva) => format!("v{} -> v{} (actualizar)", version, nueva),
-                None => {
-                    if p.enabled {
-                        "activo".to_string()
-                    } else {
-                        "inactivo".to_string()
-                    }
-                }
+                None => if p.enabled { "activo".to_string() } else { "inactivo".to_string() },
             }
         } else if p.enabled {
             "activo".to_string()
