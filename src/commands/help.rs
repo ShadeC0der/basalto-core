@@ -1,5 +1,6 @@
 use basalto_shared::BasaltoPlugin;
 use crate::plugins::PluginConf;
+use console::style;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -132,10 +133,10 @@ pub fn run(plugins: &[PluginConf], map: &HashMap<String, Rc<dyn BasaltoPlugin>>)
     let align_col = rows.iter().map(|r| r.name_end_col()).max().unwrap_or(20) + 2;
 
     // --- Segunda pasada: imprimir ---
-    println!("basalto v{}", env!("CARGO_PKG_VERSION"));
+    println!("basalto {}", style(format!("v{}", env!("CARGO_PKG_VERSION"))).cyan().bold());
 
     // Indice de la primera fila de cada plugin para saber donde insertar separadores y headers
-    let mut plugin_starts: Vec<(usize, String, bool)> = Vec::new(); // (row_idx, name, is_last)
+    let mut plugin_starts: Vec<(usize, String, bool)> = Vec::new();
     {
         let mut row_idx = BUILTINS.iter().map(|b| 1 + b.flags.len()).sum::<usize>();
         for (pi, plugin_conf) in active.iter().enumerate() {
@@ -166,28 +167,44 @@ pub fn run(plugins: &[PluginConf], map: &HashMap<String, Rc<dyn BasaltoPlugin>>)
     let mut current_row = 0;
 
     for row in &rows {
-        // Insertar separador y header de plugin cuando corresponde
         if let Some((start, pname, is_last)) = plugin_start_iter.peek() {
             if current_row == *start {
-                // Linea separadora con continuacion del arbol
-                let sep_cont = if *is_last { "│" } else { "│" };
-                println!("{}", sep_cont);
-                let prefix = if *is_last { "└──" } else { "├──" };
-                println!("{} {}", prefix, pname);
+                println!("{}", style("│").dim());
+                let prefix = style(if *is_last { "└──" } else { "├──" }).dim();
+                println!("{} {}", prefix, style(pname).green().bold());
                 plugin_start_iter.next();
             }
         }
 
-        let prefix = if row.is_last { "└──" } else { "├──" };
+        let prefix = style(if row.is_last { "└──" } else { "├──" }).dim();
         let used = row.name_end_col();
         let padding = if align_col > used { align_col - used } else { 1 };
+
+        // Flags (--flag) en amarillo, args (<ruta>, [ruta]) en dim, comandos en bold
+        let nombre = if row.name.starts_with("--") {
+            style(row.name.as_str()).yellow().to_string()
+        } else if row.name.contains('<') || row.name.contains('[') {
+            // coloriza la parte del arg por separado
+            let parts: Vec<&str> = row.name.splitn(2, ' ').collect();
+            if parts.len() == 2 {
+                format!("{} {}", style(parts[0]).bold(), style(parts[1]).dim())
+            } else {
+                style(row.name.as_str()).dim().to_string()
+            }
+        } else {
+            style(row.name.as_str()).bold().to_string()
+        };
+
+        let desc = style(row.description.as_str()).dim();
+
+        // El padding usa la longitud del nombre sin codigos ANSI
         println!(
             "{}{} {}{}{}",
-            row.indent,
+            style(&row.indent).dim(),
             prefix,
-            row.name,
+            nombre,
             " ".repeat(padding),
-            row.description
+            desc
         );
         current_row += 1;
     }
