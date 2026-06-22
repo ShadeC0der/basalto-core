@@ -12,6 +12,10 @@ const REQUIRED: &[Section] = &[
         header: "[editors]",
         default: "[editors]\navailable = [\"nvim\"]\n",
     },
+    Section {
+        header: "[core]",
+        default: "[core]\nsource = \"git@github.com:ShadeC0der/basalto-core.git\"\n",
+    },
 ];
 
 pub fn run() {

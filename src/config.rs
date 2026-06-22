@@ -1,16 +1,22 @@
-use serde::Deserialize; // Convierte un formato (TOML, JSON, etc) a Rust
+use serde::Deserialize;
 
-#[allow(dead_code)] // Silencia el warning de campos sin usar hasta que config se active
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct Library {
     pub url: String,
     pub branch: String,
 }
 
-#[allow(dead_code)] // Silencia el warning de campos sin usar hasta que config se active
+#[derive(Deserialize)]
+pub struct CoreConfig {
+    pub source: String,
+}
+
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct Config {
     pub library: Library,
+    pub core: CoreConfig,
 }
 
 pub fn read_config() -> Config {
@@ -26,4 +32,11 @@ pub fn read_config() -> Config {
     let route = format!("{}/.basalto/config.toml", home);
     let text = std::fs::read_to_string(route).unwrap();
     toml::from_str(&text).unwrap()
+}
+
+pub fn read_core() -> CoreConfig {
+    /* Resumen read_core()
+     * Lee config.toml y retorna la sección [core]
+     */
+    read_config().core
 }

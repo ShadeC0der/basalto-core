@@ -1,4 +1,4 @@
-//mod config; // Lee configuración en ./basalto/config.toml
+mod config; // Lee configuración en ./basalto/config.toml
 mod commands; // Comandos built-in del Core
 mod dispatcher; // Carga cada .so y crea el mapa comando -> plugin
 mod installer; // Clona repo del plugin y compila el .so, declarado aquí para usarlo en dispatcher
