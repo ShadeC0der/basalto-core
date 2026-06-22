@@ -72,6 +72,34 @@ pub fn build(
         installer::ensure(name, &input.source, &path, &input.branch);
         let lib = unsafe { libloading::Library::new(&path).unwrap() };
 
+        // Verifica compatibilidad de basalto-shared antes de cargar el plugin
+        let plugin_shared_version: &str = unsafe {
+            match lib.get::<unsafe extern "C" fn() -> &'static str>(b"_basalto_shared_version") {
+                Ok(f) => f(),
+                Err(_) => {
+                    println!(
+                        "Plugin '{}' no declara version de basalto-shared. Corre: basalto update",
+                        name
+                    );
+                    continue;
+                }
+            }
+        };
+
+        let core_major = basalto_shared::SHARED_VERSION
+            .split('.')
+            .next()
+            .unwrap_or("0");
+        let plugin_major = plugin_shared_version.split('.').next().unwrap_or("0");
+
+        if core_major != plugin_major {
+            println!(
+                "Plugin '{}' usa basalto-shared v{} (core usa v{}). Corre: basalto update",
+                name, plugin_shared_version, basalto_shared::SHARED_VERSION
+            );
+            continue;
+        }
+
         let plugin: Rc<dyn BasaltoPlugin> = {
             let constructor: libloading::Symbol<fn() -> *mut dyn BasaltoPlugin> =
                 unsafe { lib.get(b"_basalto_create_plugin").unwrap() };
