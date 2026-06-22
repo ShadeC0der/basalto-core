@@ -1,5 +1,4 @@
 use crate::plugins::PluginConf;
-use crate::config;
 
 pub fn run(plugins: &[PluginConf], args: &[&str]) {
     /* Resumen de run(plugins, args)
@@ -18,8 +17,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
     let core_version = env!("CARGO_PKG_VERSION");
 
     if check {
-        let core_conf = config::read_core();
-        match check_remote_version(&core_conf.source) {
+        match check_remote_version("") {
             Some(nueva) => println!(
                 "basalto-core v{} -> v{} (actualizar)",
                 core_version, nueva
@@ -152,40 +150,52 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
             })
     }
 
-    fn check_remote_version(source: &str) -> Option<String> {
-        /* Resumen de check_remote_version(source)
-         * Usa git ls-remote para obtener el Cargo.toml del remoto sin clonar
-         * Extrae la versión del contenido remoto
-         * Retorna Some(version) si es distinta a la local, None si coincide
+    fn check_remote_version(_source: &str) -> Option<String> {
+        /* Resumen de check_remote_version
+         * Usa el cache local en ~/.basalto/cache/core/ (creado por basalto update)
+         * Hace git fetch y compara commits con @{u}
+         * Si hay commits nuevos lee el Cargo.toml remoto para obtener la versión
+         * Retorna Some(version) si hay actualización, None si está al día o no hay cache
          */
 
-        let output = std::process::Command::new("git")
-            .args(["ls-remote", source, "HEAD"])
-            .output()
-            .ok()?;
+        let home = dirs::home_dir()?;
+        let core_dir = format!("{}/.basalto/cache/core", home.to_str()?);
 
-        let sha = String::from_utf8(output.stdout)
-            .ok()?
-            .split_whitespace()
-            .next()?
-            .to_string();
-
-        let cargo = std::process::Command::new("git")
-            .args(["archive", &format!("--remote={}", source), &sha, "Cargo.toml"])
-            .output()
-            .ok()?;
-
-        let content = String::from_utf8(cargo.stdout).ok()?;
-        let remote_version = content
-            .lines()
-            .find(|l| l.starts_with("version"))
-            .and_then(|l| l.split('"').nth(1))
-            .map(|v| v.to_string())?;
-
-        if remote_version != env!("CARGO_PKG_VERSION") {
-            Some(remote_version)
-        } else {
-            None
+        if !std::path::Path::new(&core_dir).exists() {
+            return None;
         }
+
+        std::process::Command::new("git")
+            .args(["fetch"])
+            .current_dir(&core_dir)
+            .output()
+            .ok();
+
+        let count = std::process::Command::new("git")
+            .args(["rev-list", "HEAD..@{u}", "--count"])
+            .current_dir(&core_dir)
+            .output()
+            .ok()?;
+
+        let behind = String::from_utf8_lossy(&count.stdout).trim().to_string();
+
+        if behind == "0" {
+            return None;
+        }
+
+        std::process::Command::new("git")
+            .args(["show", "@{u}:Cargo.toml"])
+            .current_dir(&core_dir)
+            .output()
+            .ok()
+            .and_then(|o| {
+                String::from_utf8(o.stdout).ok().and_then(|content| {
+                    content
+                        .lines()
+                        .find(|l| l.starts_with("version"))
+                        .and_then(|l| l.split('"').nth(1))
+                        .map(|v| v.to_string())
+                })
+            })
     }
 }
