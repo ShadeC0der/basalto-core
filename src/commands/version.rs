@@ -156,7 +156,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
             return None;
         }
 
-        std::process::Command::new("git")
+        let remote_version = std::process::Command::new("git")
             .args(["show", "@{u}:Cargo.toml"])
             .current_dir(&plugin_dir)
             .output()
@@ -169,7 +169,14 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
                         .and_then(|l| l.split('"').nth(1))
                         .map(|v| v.to_string())
                 })
-            })
+            })?;
+
+        let local_version = read_plugin_version(name);
+        if remote_version != local_version {
+            Some(remote_version)
+        } else {
+            None
+        }
     }
 
     fn spinner() -> ProgressBar {
@@ -216,7 +223,7 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
             return None;
         }
 
-        std::process::Command::new("git")
+        let remote_version = std::process::Command::new("git")
             .args(["show", "@{u}:Cargo.toml"])
             .current_dir(&core_dir)
             .output()
@@ -229,6 +236,12 @@ pub fn run(plugins: &[PluginConf], args: &[&str]) {
                         .and_then(|l| l.split('"').nth(1))
                         .map(|v| v.to_string())
                 })
-            })
+            })?;
+
+        if remote_version != env!("CARGO_PKG_VERSION") {
+            Some(remote_version)
+        } else {
+            None
+        }
     }
 }
