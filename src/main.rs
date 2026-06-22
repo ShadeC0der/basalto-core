@@ -38,6 +38,7 @@ fn main() {
 
         match command.as_str() {
             "version" => commands::version::run(&plugins, &args_str),
+            "update" => commands::update::run(&args_str),
             _ => match map.get(command.as_str()) {
                 Some(plugin) => plugin.execute_command(command, &args_str),
                 None => println!("Unknown command: {}", command),
